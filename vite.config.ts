@@ -5,6 +5,6 @@ export default defineConfig({
   plugins: [vue()],
   test: {
     environment: "node",
-    include: ["src/**/*.spec.ts"],
+    include: ["src/**/*.spec.ts", "server/**/*.spec.js"],
   },
 });

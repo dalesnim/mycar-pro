@@ -21,4 +21,5 @@ export interface Defect {
   severity: Severity;
   status: DefectStatus;
   comment: string;
+  createdAt: string;
 }

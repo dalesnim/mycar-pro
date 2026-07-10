@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from "vue";
 import { useDefects } from "../composables/useDefects";
-import { DEFECT_CATALOG } from "../data/defectCatalog";
 import { ZONE_IDS } from "../data/bodyZones";
 import { SEVERITIES, type DefectStatus, type Severity } from "../types/defect";
 import { allowedTransitions } from "../logic/fsm";
@@ -9,7 +8,7 @@ import { STATUS_COLORS } from "../data/statusTheme";
 import type { ValidationErrors } from "../logic/validation";
 
 const store = useDefects();
-const { draft, selectedDefect } = store;
+const { draft, selectedDefect, defectTypes } = store;
 
 const zoneOptions = ZONE_IDS;
 
@@ -39,13 +38,13 @@ function applyValidationErrors(res: { errors: ValidationErrors }) {
   errors.zone = res.errors.zone;
 }
 
-function onSave() {
+async function onSave() {
   if (mode.value === "create") {
-    applyValidationErrors(store.saveDraft({ ...form }));
+    applyValidationErrors(await store.saveDraft({ ...form }));
   } else if (mode.value === "edit") {
     const d = selectedDefect.value;
     if (!d) return;
-    applyValidationErrors(store.updateDefect(d.id, { ...form }));
+    applyValidationErrors(await store.updateDefect(d.id, { ...form }));
   }
 }
 
@@ -56,12 +55,12 @@ function onCancel() {
 
 function onDelete() {
   const d = selectedDefect.value;
-  if (d) store.deleteDefect(d.id);
+  if (d) void store.deleteDefect(d.id);
 }
 
 function onStatusChange(to: DefectStatus) {
   const d = selectedDefect.value;
-  if (d) store.changeStatus(d.id, to);
+  if (d) void store.changeStatus(d.id, to);
 }
 
 watch(draft, (d) => {
@@ -99,7 +98,7 @@ watch(selectedDefect, (d) => {
         <label for="f-type">Тип дефекта *</label>
         <select id="f-type" v-model="form.typeId" :class="{ invalid: errors.typeId }">
           <option value="" disabled>— выберите тип —</option>
-          <option v-for="t in DEFECT_CATALOG" :key="t.id" :value="t.id">
+          <option v-for="t in defectTypes" :key="t.id" :value="t.id">
             {{ t.name }} ({{ t.category }})
           </option>
         </select>
@@ -149,8 +148,10 @@ watch(selectedDefect, (d) => {
       </div>
 
       <p v-if="mode === 'edit' && selectedDefect" class="meta">
-        VIN {{ selectedDefect.vin }} · точка ({{ selectedDefect.x.toFixed(2) }},
-        {{ selectedDefect.y.toFixed(2) }}, {{ selectedDefect.z.toFixed(2) }})
+        {{ selectedDefect.id }} · VIN {{ selectedDefect.vin }} · точка ({{
+          selectedDefect.x.toFixed(2) }}, {{ selectedDefect.y.toFixed(2) }},
+        {{ selectedDefect.z.toFixed(2) }})<template v-if="selectedDefect.createdAt">
+          · {{ selectedDefect.createdAt.slice(0, 10) }}</template>
       </p>
 
       <div class="actions">

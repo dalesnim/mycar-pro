@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { useDefects } from "../composables/useDefects";
-import { DEFECT_CATALOG } from "../data/defectCatalog";
 import { DEFECT_STATUSES } from "../types/defect";
 import { STATUS_COLORS } from "../data/statusTheme";
 
 const store = useDefects();
-const { visibleDefects, filterTypeId, filterStatus, selectedId, selectDefect } =
-  store;
+const {
+  visibleDefects,
+  defectTypes,
+  filterTypeId,
+  filterStatus,
+  selectedId,
+  selectDefect,
+} = store;
 
 function typeName(typeId: string): string {
-  return DEFECT_CATALOG.find((t) => t.id === typeId)?.name ?? typeId;
+  return defectTypes.value.find((t) => t.id === typeId)?.name ?? typeId;
 }
 </script>
 
@@ -20,7 +25,7 @@ function typeName(typeId: string): string {
     <div class="filters">
       <select v-model="filterTypeId" aria-label="Фильтр по типу">
         <option value="">все типы</option>
-        <option v-for="t in DEFECT_CATALOG" :key="t.id" :value="t.id">
+        <option v-for="t in defectTypes" :key="t.id" :value="t.id">
           {{ t.name }}
         </option>
       </select>

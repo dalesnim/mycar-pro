@@ -2,6 +2,7 @@
 import { useDefects } from "../composables/useDefects";
 import { DEFECT_STATUSES } from "../types/defect";
 import { STATUS_COLORS } from "../data/statusTheme";
+import { pdiReportUrl } from "../api/client";
 
 const { summary, currentVin, bodyDefects } = useDefects();
 </script>
@@ -10,7 +11,19 @@ const { summary, currentVin, bodyDefects } = useDefects();
   <section class="summary">
     <div class="vin-row">
       <label for="vin">VIN кузова</label>
-      <input id="vin" v-model="currentVin" spellcheck="false" />
+      <input id="vin" v-model.lazy="currentVin" spellcheck="false" />
+    </div>
+
+    <div class="report-row">
+      <a
+        class="report-btn report-btn-primary"
+        :href="pdiReportUrl(currentVin, 'html')"
+        target="_blank"
+        rel="noopener"
+      >
+        Отчёт PDI
+      </a>
+      <a class="report-btn" :href="pdiReportUrl(currentVin, 'csv')">CSV</a>
     </div>
 
     <div class="tiles">
@@ -57,6 +70,32 @@ const { summary, currentVin, bodyDefects } = useDefects();
   border: 1px solid #c3ced8;
   border-radius: 6px;
   width: 200px;
+}
+.report-row {
+  display: flex;
+  gap: 6px;
+}
+.report-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border: 1px solid #c3ced8;
+  border-radius: 8px;
+  background: #f2f5f8;
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.12s;
+}
+.report-btn:hover {
+  background: #e6ecf1;
+}
+.report-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.report-btn-primary:hover {
+  background: var(--accent-hover);
 }
 .tiles {
   display: flex;

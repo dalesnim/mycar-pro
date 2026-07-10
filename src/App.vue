@@ -3,6 +3,10 @@ import CarBodyMap from "./components/CarBodyMap.vue";
 import DefectCard from "./components/DefectCard.vue";
 import DefectList from "./components/DefectList.vue";
 import SummaryPanel from "./components/SummaryPanel.vue";
+import { useDefects } from "./composables/useDefects";
+
+const store = useDefects();
+const { apiError, loading } = store;
 </script>
 
 <template>
@@ -13,7 +17,18 @@ import SummaryPanel from "./components/SummaryPanel.vue";
         <h1>Defect Logger</h1>
         <p class="app-subtitle">ОТК · MyCar Pro Smart Factory</p>
       </div>
+      <div class="conn" :class="apiError ? 'conn-off' : 'conn-on'">
+        <span class="conn-dot"></span>
+        {{ apiError ? "нет связи с сервером" : loading ? "синхронизация…" : "данные с сервера" }}
+      </div>
     </header>
+
+    <div v-if="apiError" class="api-banner">
+      <span>⚠ {{ apiError }}</span>
+      <button type="button" class="retry-btn" @click="store.refresh()">
+        Повторить
+      </button>
+    </div>
 
     <div class="layout">
       <div class="col-map">
@@ -64,6 +79,63 @@ h1 {
   margin: 1px 0 0;
   color: var(--text-dim);
   font-size: 13px;
+}
+.conn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  color: var(--text-dim);
+}
+.conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.conn-on .conn-dot {
+  background: #2fa44f;
+}
+.conn-off {
+  color: #c0353a;
+  border-color: #f0a9ac;
+  background: #fdf1f1;
+}
+.conn-off .conn-dot {
+  background: #e5484d;
+}
+.api-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  border: 1px solid #f0c8a0;
+  border-radius: var(--radius);
+  background: #fdf6ec;
+  color: #8a5a1e;
+  font-size: 14px;
+}
+.retry-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 14px;
+  border: 1px solid #d9b17c;
+  border-radius: 8px;
+  background: #fff;
+  color: #8a5a1e;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.retry-btn:hover {
+  background: #faf0e0;
 }
 .layout {
   display: grid;

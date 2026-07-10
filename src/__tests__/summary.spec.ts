@@ -17,6 +17,7 @@ function makeDefect(status: DefectStatus): Defect {
     severity: "незначительный",
     status,
     comment: "",
+    createdAt: "2026-07-21T09:00:00.000Z",
   };
 }
 
