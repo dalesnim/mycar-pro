@@ -94,8 +94,7 @@ file).
 
 ## The workstation UI
 
-Three views in the left rail (deep-linkable via `?view=journal|analytics`,
-theme via `?theme=dark`):
+Three views in the left rail (deep-linkable via `?view=journal|analytics`):
 
 - **Осмотр** — andon strip (per-status counters + live «годен / не годен»
   verdict), the 3D car with camera presets (изо/спереди/сзади/…), marker hover
@@ -108,9 +107,8 @@ theme via `?theme=dark`):
 
 The left rail lists every body with a fit lamp and open/total counts;
 «+ Новый кузов» registers a clean VIN. Data auto-syncs from the server every
-15 s; the topbar shows the last sync time, PDI/CSV export for the current VIN,
-and a light/dark theme toggle. Actions confirm with toasts; deletion asks
-first.
+15 s; the topbar shows the last sync time and PDI/CSV export for the current
+VIN. Actions confirm with toasts; deletion asks first.
 
 ## How to use
 

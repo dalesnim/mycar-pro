@@ -55,40 +55,6 @@
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
-:root[data-theme="dark"] {
-  --bg: #12171d;
-  --bg-dot: rgba(219, 228, 236, 0.05);
-  --panel-bg: #1a212a;
-  --panel-border: #2b3542;
-  --line: #26303b;
-  --ink: #e6edf3;
-  --text-dim: #93a3b3;
-  --text-faint: #64748b;
-
-  --input-bg: #141a21;
-  --hover-bg: #202a35;
-  --btn-bg: #232d38;
-  --btn-hover: #2b3743;
-  --tile-bg: #171e26;
-  --panel-2: #202933;
-
-  --accent: #2fb3c4;
-  --accent-hover: #4cc4d3;
-  --accent-soft: #143139;
-
-  --good-ink: #57c07c;
-  --good-bg: #14251b;
-  --good-border: #2b5e3d;
-  --bad-ink: #f27d81;
-  --bad-bg: #2c181a;
-  --bad-border: #6e3236;
-  --warn-ink: #dfa960;
-  --warn-bg: #291f11;
-  --warn-border: #5e4520;
-
-  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-
 * {
   box-sizing: border-box;
 }

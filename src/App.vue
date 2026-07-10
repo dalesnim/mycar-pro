@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watchEffect } from "vue";
+import { computed, ref } from "vue";
 import GarageSidebar, { type AppView } from "./components/GarageSidebar.vue";
 import InspectView from "./components/InspectView.vue";
 import JournalView from "./components/JournalView.vue";
@@ -11,9 +11,8 @@ import { pdiReportUrl } from "./api/client";
 const store = useDefects();
 const { apiError, loading, lastSyncAt, currentVin } = store;
 
-// диплинки: ?view=journal|analytics и ?theme=dark|light
-const params = new URLSearchParams(window.location.search);
-const initialView = params.get("view");
+// диплинк: ?view=journal|analytics
+const initialView = new URLSearchParams(window.location.search).get("view");
 const view = ref<AppView>(
   initialView === "journal" || initialView === "analytics"
     ? initialView
@@ -25,14 +24,6 @@ const VIEW_TITLES: Record<AppView, string> = {
   journal: "Журнал дефектов",
   analytics: "Аналитика ОТК",
 };
-
-const theme = ref(
-  params.get("theme") ?? localStorage.getItem("qc-theme") ?? "light",
-);
-watchEffect(() => {
-  document.documentElement.dataset.theme = theme.value;
-  localStorage.setItem("qc-theme", theme.value);
-});
 
 const syncLabel = computed(() =>
   lastSyncAt.value
@@ -77,14 +68,6 @@ function openDefect(vin: string, id: string) {
             Отчёт PDI
           </a>
           <a class="top-btn" :href="pdiReportUrl(currentVin, 'csv')">CSV</a>
-          <button
-            type="button"
-            class="top-btn theme-btn"
-            :title="theme === 'light' ? 'Тёмная тема' : 'Светлая тема'"
-            @click="theme = theme === 'light' ? 'dark' : 'light'"
-          >
-            {{ theme === "light" ? "◐" : "◑" }}
-          </button>
         </div>
       </header>
 
@@ -188,11 +171,6 @@ function openDefect(vin: string, id: string) {
 }
 .top-btn-primary:hover {
   background: var(--accent-hover);
-}
-.theme-btn {
-  font-size: 15px;
-  line-height: 1;
-  padding: 6px 10px;
 }
 .api-banner {
   display: flex;
