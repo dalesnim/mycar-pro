@@ -9,6 +9,7 @@ export function createFakeApi(seed: Defect[] = []) {
   let nextId = 1;
   const defects: Defect[] = seed.map((d) => ({ ...d }));
   const types: DefectType[] = DEFECT_CATALOG.map((t) => ({ ...t }));
+  const vins: string[] = [];
 
   const api: DefectApi = {
     async listDefects(vin) {
@@ -52,7 +53,32 @@ export function createFakeApi(seed: Defect[] = []) {
     async listDefectTypes() {
       return types.map((t) => ({ ...t }));
     },
+    async listVins() {
+      const known = [...new Set([...vins, ...defects.map((d) => d.vin)])];
+      return known.map((vin) => {
+        const list = defects.filter((d) => d.vin === vin);
+        const open = list.filter(
+          (d) => d.status === "новый" || d.status === "в ремонте",
+        ).length;
+        return {
+          vin,
+          total: list.length,
+          open,
+          fixed: list.filter((d) => d.status === "устранён").length,
+          rejected: list.filter((d) => d.status === "отклонён").length,
+          fit: open === 0,
+        };
+      });
+    },
+    async createVin(vin) {
+      if (vins.includes(vin)) {
+        throw new ApiError(400, "Ошибка валидации", {
+          vin: `Кузов ${vin} уже зарегистрирован`,
+        });
+      }
+      vins.push(vin);
+    },
   };
 
-  return { api, defects };
+  return { api, defects, vins };
 }

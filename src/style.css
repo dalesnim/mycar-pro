@@ -1,26 +1,50 @@
 :root {
-  /* steel neutrals */
+  /* steel neutrals — light */
   --bg: #edf0f4;
+  --bg-dot: rgba(23, 34, 44, 0.07);
   --panel-bg: #ffffff;
   --panel-border: #d4dce4;
+  --line: #e2e8ee;
   --ink: #17222c;
   --text: var(--ink);
   --text-dim: #5a6b7b;
   --text-faint: #8595a5;
+
+  --input-bg: #f6f8fa;
+  --hover-bg: #f4f8fb;
+  --btn-bg: #f2f5f8;
+  --btn-hover: #e6ecf1;
+  --tile-bg: #fbfcfe;
+  --panel-2: #f2f5f8;
 
   /* machine enamel */
   --accent: #0f6f7c;
   --accent-hover: #0b5a65;
   --accent-soft: #e3f0f2;
 
-  /* signal colors (statuses) */
+  /* semantic surfaces */
+  --good-ink: #1d7a3d;
+  --good-bg: #ecf7f0;
+  --good-border: #9fd8b2;
+  --bad-ink: #c0353a;
+  --bad-bg: #fdf1f1;
+  --bad-border: #f0a9ac;
+  --warn-ink: #8a5a1e;
+  --warn-bg: #fdf6ec;
+  --warn-border: #f0c8a0;
+
+  /* signal colors (statuses) — same in both themes */
   --signal-new: #e5484d;
   --signal-repair: #e08a0c;
   --signal-fixed: #2fa44f;
   --signal-rejected: #8b93a1;
   --danger: #e5484d;
 
-  /* stage (3D booth) */
+  /* left rail + 3D booth: dark in both themes */
+  --rail-bg: #1b232c;
+  --rail-border: #2b3542;
+  --rail-ink: #dbe4ec;
+  --rail-dim: #8b99a7;
   --stage: #232a32;
 
   --radius: 6px;
@@ -29,6 +53,40 @@
   --font-display: "Avenir Next Condensed", "Helvetica Neue", "Arial Narrow",
     system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root[data-theme="dark"] {
+  --bg: #12171d;
+  --bg-dot: rgba(219, 228, 236, 0.05);
+  --panel-bg: #1a212a;
+  --panel-border: #2b3542;
+  --line: #26303b;
+  --ink: #e6edf3;
+  --text-dim: #93a3b3;
+  --text-faint: #64748b;
+
+  --input-bg: #141a21;
+  --hover-bg: #202a35;
+  --btn-bg: #232d38;
+  --btn-hover: #2b3743;
+  --tile-bg: #171e26;
+  --panel-2: #202933;
+
+  --accent: #2fb3c4;
+  --accent-hover: #4cc4d3;
+  --accent-soft: #143139;
+
+  --good-ink: #57c07c;
+  --good-bg: #14251b;
+  --good-border: #2b5e3d;
+  --bad-ink: #f27d81;
+  --bad-bg: #2c181a;
+  --bad-border: #6e3236;
+  --warn-ink: #dfa960;
+  --warn-bg: #291f11;
+  --warn-border: #5e4520;
+
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -41,11 +99,7 @@ body {
   font-size: 14px;
   background-color: var(--bg);
   /* engineering paper: faint dot grid */
-  background-image: radial-gradient(
-    circle,
-    rgba(23, 34, 44, 0.07) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(circle, var(--bg-dot) 1px, transparent 1px);
   background-size: 22px 22px;
   color: var(--text);
 }
@@ -92,4 +146,12 @@ a:focus-visible {
   height: 14px;
   background: var(--accent);
   flex: none;
+}
+
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel);
+  padding: 16px 18px;
 }

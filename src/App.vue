@@ -1,103 +1,152 @@
 <script setup lang="ts">
-import CarBodyMap from "./components/CarBodyMap.vue";
-import DefectCard from "./components/DefectCard.vue";
-import DefectList from "./components/DefectList.vue";
-import SummaryPanel from "./components/SummaryPanel.vue";
+import { computed, ref, watchEffect } from "vue";
+import GarageSidebar, { type AppView } from "./components/GarageSidebar.vue";
+import InspectView from "./components/InspectView.vue";
+import JournalView from "./components/JournalView.vue";
+import AnalyticsView from "./components/AnalyticsView.vue";
+import ToastStack from "./components/ToastStack.vue";
 import { useDefects } from "./composables/useDefects";
+import { pdiReportUrl } from "./api/client";
 
 const store = useDefects();
-const { apiError, loading } = store;
+const { apiError, loading, lastSyncAt, currentVin } = store;
+
+// диплинки: ?view=journal|analytics и ?theme=dark|light
+const params = new URLSearchParams(window.location.search);
+const initialView = params.get("view");
+const view = ref<AppView>(
+  initialView === "journal" || initialView === "analytics"
+    ? initialView
+    : "inspect",
+);
+
+const VIEW_TITLES: Record<AppView, string> = {
+  inspect: "Осмотр кузова",
+  journal: "Журнал дефектов",
+  analytics: "Аналитика ОТК",
+};
+
+const theme = ref(
+  params.get("theme") ?? localStorage.getItem("qc-theme") ?? "light",
+);
+watchEffect(() => {
+  document.documentElement.dataset.theme = theme.value;
+  localStorage.setItem("qc-theme", theme.value);
+});
+
+const syncLabel = computed(() =>
+  lastSyncAt.value
+    ? lastSyncAt.value.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    : "—",
+);
+
+function openDefect(vin: string, id: string) {
+  currentVin.value = vin;
+  store.selectDefect(id);
+  view.value = "inspect";
+}
 </script>
 
 <template>
-  <main class="app">
-    <header class="app-header">
-      <div class="logo">QC</div>
-      <div class="brand">
-        <h1>Defect Logger</h1>
-        <p class="app-subtitle">ОТК · MyCar Pro Smart Factory</p>
-      </div>
-      <div class="conn" :class="apiError ? 'conn-off' : 'conn-on'">
-        <span class="conn-dot"></span>
-        {{ apiError ? "нет связи с сервером" : loading ? "синхронизация…" : "данные с сервера" }}
-      </div>
-    </header>
+  <div class="shell">
+    <GarageSidebar v-model:view="view" />
 
-    <div v-if="apiError" class="api-banner">
-      <span>⚠ {{ apiError }}</span>
-      <button type="button" class="retry-btn" @click="store.refresh()">
-        Повторить
-      </button>
-    </div>
+    <main class="content">
+      <header class="topbar">
+        <h1 class="view-title">{{ VIEW_TITLES[view] }}</h1>
 
-    <SummaryPanel />
-
-    <div class="layout">
-      <div class="col-map">
-        <div class="map-panel">
-          <CarBodyMap />
+        <div class="top-actions">
+          <div
+            class="conn"
+            :class="apiError ? 'conn-off' : 'conn-on'"
+            :title="`последняя синхронизация: ${syncLabel}`"
+          >
+            <span class="conn-dot"></span>
+            {{ apiError ? "нет связи" : loading ? "синхронизация…" : `синхр. ${syncLabel}` }}
+          </div>
+          <a
+            class="top-btn top-btn-primary"
+            :href="pdiReportUrl(currentVin, 'html')"
+            target="_blank"
+            rel="noopener"
+          >
+            Отчёт PDI
+          </a>
+          <a class="top-btn" :href="pdiReportUrl(currentVin, 'csv')">CSV</a>
+          <button
+            type="button"
+            class="top-btn theme-btn"
+            :title="theme === 'light' ? 'Тёмная тема' : 'Светлая тема'"
+            @click="theme = theme === 'light' ? 'dark' : 'light'"
+          >
+            {{ theme === "light" ? "◐" : "◑" }}
+          </button>
         </div>
+      </header>
+
+      <div v-if="apiError" class="api-banner">
+        <span>⚠ {{ apiError }}</span>
+        <button type="button" class="retry-btn" @click="store.refresh()">
+          Повторить
+        </button>
       </div>
-      <div class="col-side">
-        <DefectCard />
-        <DefectList />
-      </div>
-    </div>
-  </main>
+
+      <InspectView v-if="view === 'inspect'" />
+      <JournalView v-else-if="view === 'journal'" @open="openDefect" />
+      <AnalyticsView v-else />
+    </main>
+
+    <ToastStack />
+  </div>
 </template>
 
 <style scoped>
-.app {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 18px 24px 48px;
+.shell {
+  display: flex;
+  min-height: 100vh;
 }
-.app-header {
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 22px 48px;
+  max-width: 1360px;
+}
+.topbar {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 14px;
 }
-.logo {
-  width: 38px;
-  height: 38px;
-  border: 2px solid var(--ink);
-  border-radius: 4px;
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  display: grid;
-  place-items: center;
-  background: var(--panel-bg);
-}
-h1 {
+.view-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.09em;
 }
-.app-subtitle {
-  margin: 0;
-  color: var(--text-dim);
-  font-size: 12px;
-  letter-spacing: 0.02em;
+.top-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .conn {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 7px;
   font-family: var(--font-mono);
   font-size: 11px;
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
   color: var(--text-dim);
+  white-space: nowrap;
 }
 .conn-dot {
   width: 8px;
@@ -108,12 +157,42 @@ h1 {
   background: var(--signal-fixed);
 }
 .conn-off {
-  color: #c0353a;
-  border-color: #f0a9ac;
-  background: #fdf1f1;
+  color: var(--bad-ink);
+  border-color: var(--bad-border);
+  background: var(--bad-bg);
 }
 .conn-off .conn-dot {
   background: var(--signal-new);
+}
+.top-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  background: var(--btn-bg);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+.top-btn:hover {
+  background: var(--btn-hover);
+}
+.top-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.top-btn-primary:hover {
+  background: var(--accent-hover);
+}
+.theme-btn {
+  font-size: 15px;
+  line-height: 1;
+  padding: 6px 10px;
 }
 .api-banner {
   display: flex;
@@ -122,10 +201,10 @@ h1 {
   gap: 12px;
   margin-bottom: 14px;
   padding: 10px 16px;
-  border: 1px solid #f0c8a0;
+  border: 1px solid var(--warn-border);
   border-radius: var(--radius);
-  background: #fdf6ec;
-  color: #8a5a1e;
+  background: var(--warn-bg);
+  color: var(--warn-ink);
   font-size: 14px;
 }
 .retry-btn {
@@ -133,40 +212,16 @@ h1 {
   font-size: 13px;
   font-weight: 600;
   padding: 5px 14px;
-  border: 1px solid #d9b17c;
+  border: 1px solid var(--warn-border);
   border-radius: var(--radius);
-  background: #fff;
-  color: #8a5a1e;
+  background: var(--panel-bg);
+  color: var(--warn-ink);
   cursor: pointer;
   white-space: nowrap;
 }
-.retry-btn:hover {
-  background: #faf0e0;
-}
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 400px;
-  gap: 14px;
-  align-items: start;
-  margin-top: 14px;
-}
-.col-map,
-.col-side {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.map-panel {
-  background: var(--stage);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-panel);
-  padding: 0;
-  overflow: hidden;
-}
-@media (max-width: 980px) {
-  .layout {
-    grid-template-columns: 1fr;
+@media (max-width: 900px) {
+  .shell {
+    flex-direction: column;
   }
 }
 </style>

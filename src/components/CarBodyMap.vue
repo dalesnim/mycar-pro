@@ -22,6 +22,27 @@ const store = useDefects();
 const { visibleDefects, draft, selectedId, selectDefect, startDraft } = store;
 
 const wrapEl = ref<HTMLDivElement | null>(null);
+const hover = ref<{ x: number; y: number; text: string } | null>(null);
+
+// ракурсы камеры; перед автомобиля — в сторону +x
+const CAMERA_VIEWS = {
+  "изо": [5.4, 3.1, 5.8],
+  "спереди": [7.4, 1.8, 0],
+  "сзади": [-7.4, 1.8, 0],
+  "справа": [0, 2.2, 7.2],
+  "слева": [0, 2.2, -7.2],
+  "сверху": [0.01, 8.4, 0.01],
+} as const;
+type ViewName = keyof typeof CAMERA_VIEWS;
+const viewNames = Object.keys(CAMERA_VIEWS) as ViewName[];
+let camTarget: THREE.Vector3 | null = null;
+
+function setView(name: ViewName) {
+  const [x, y, z] = CAMERA_VIEWS[name];
+  camTarget = new THREE.Vector3(x, y, z);
+}
+
+const LEGEND = Object.entries(STATUS_COLORS);
 
 let renderer: THREE.WebGLRenderer | null = null;
 let camera: THREE.PerspectiveCamera;
@@ -174,6 +195,34 @@ function roundCoord(v: number) {
 function onPointerDown(e: PointerEvent) {
   downX = e.clientX;
   downY = e.clientY;
+  camTarget = null; // ручное вращение отменяет полёт к ракурсу
+}
+
+function onPointerMove(e: PointerEvent) {
+  if (!renderer) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.set(
+    ((e.clientX - rect.left) / rect.width) * 2 - 1,
+    -((e.clientY - rect.top) / rect.height) * 2 + 1,
+  );
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster
+    .intersectObjects(markerGroup.children, false)
+    .find((h) => h.object.userData.defectId);
+  if (hit) {
+    const d = visibleDefects.value.find(
+      (x) => x.id === hit.object.userData.defectId,
+    );
+    hover.value = d
+      ? {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+          text: `${store.typeName(d.typeId)} · ${d.zone} · ${d.status}`,
+        }
+      : null;
+  } else {
+    hover.value = null;
+  }
 }
 
 function onClick(e: MouseEvent) {
@@ -252,6 +301,7 @@ onMounted(() => {
   controls.maxPolarAngle = Math.PI / 2 - 0.06;
 
   renderer.domElement.addEventListener("pointerdown", onPointerDown);
+  renderer.domElement.addEventListener("pointermove", onPointerMove);
   renderer.domElement.addEventListener("click", onClick);
 
   const resize = () => {
@@ -270,6 +320,10 @@ onMounted(() => {
   const tick = (t: number) => {
     rafId = requestAnimationFrame(tick);
     draftMesh.scale.setScalar(1 + 0.18 * Math.sin(t / 220));
+    if (camTarget) {
+      camera.position.lerp(camTarget, 0.12);
+      if (camera.position.distanceTo(camTarget) < 0.02) camTarget = null;
+    }
     controls.update();
     renderer!.render(scene, camera);
   };
@@ -281,6 +335,7 @@ onBeforeUnmount(() => {
   resizeObs?.disconnect();
   controls?.dispose();
   renderer?.domElement.removeEventListener("pointerdown", onPointerDown);
+  renderer?.domElement.removeEventListener("pointermove", onPointerMove);
   renderer?.domElement.removeEventListener("click", onClick);
   renderer?.dispose();
 });
@@ -288,7 +343,39 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="map3d">
-    <div ref="wrapEl" class="canvas-wrap" aria-label="3D-модель кузова"></div>
+    <div
+      ref="wrapEl"
+      class="canvas-wrap"
+      :class="{ point: hover }"
+      aria-label="3D-модель кузова"
+    >
+      <div class="views">
+        <button
+          v-for="name in viewNames"
+          :key="name"
+          type="button"
+          class="view-btn"
+          @click="setView(name)"
+        >
+          {{ name }}
+        </button>
+      </div>
+
+      <div
+        v-if="hover"
+        class="tooltip"
+        :style="{ left: hover.x + 12 + 'px', top: hover.y + 12 + 'px' }"
+      >
+        {{ hover.text }}
+      </div>
+
+      <div class="legend">
+        <span v-for="[status, color] in LEGEND" :key="status" class="legend-item">
+          <span class="legend-dot" :style="{ backgroundColor: color }"></span>
+          {{ status }}
+        </span>
+      </div>
+    </div>
     <p class="hint">
       перетащите — вращение · колесо — масштаб · клик по кузову — точка дефекта
     </p>
@@ -301,6 +388,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
 }
 .canvas-wrap {
+  position: relative;
   width: 100%;
   height: 460px;
   cursor: grab;
@@ -308,8 +396,72 @@ onBeforeUnmount(() => {
 .canvas-wrap:active {
   cursor: grabbing;
 }
+.canvas-wrap.point {
+  cursor: pointer;
+}
 .canvas-wrap :deep(canvas) {
   display: block;
+}
+.views {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.view-btn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 9px;
+  border: 1px solid #39434e;
+  border-radius: 4px;
+  background: rgba(20, 25, 31, 0.75);
+  color: #aeb9c5;
+  cursor: pointer;
+}
+.view-btn:hover {
+  color: #fff;
+  border-color: #55626f;
+}
+.tooltip {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: 4px;
+  background: rgba(13, 17, 21, 0.92);
+  color: #e6edf3;
+  border: 1px solid #39434e;
+  white-space: nowrap;
+}
+.legend {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  display: flex;
+  gap: 12px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background: rgba(20, 25, 31, 0.75);
+  border: 1px solid #39434e;
+  pointer-events: none;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #aeb9c5;
+  white-space: nowrap;
+}
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 .hint {
   margin: 0;

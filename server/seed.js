@@ -9,6 +9,20 @@ const dataFile = process.env.DATA_FILE ?? join(here, "data.json");
 const DEMO_VIN = "Z94C241BBLR000001";
 const day = (d) => `2026-07-${String(d).padStart(2, "0")}T09:30:00.000Z`;
 
+const historyFor = (n, status) => {
+  const h = [{ to: "новый", at: day(20 + n) }];
+  if (status === "в ремонте" || status === "устранён") {
+    h.push({ from: "новый", to: "в ремонте", at: day(21 + n) });
+  }
+  if (status === "устранён") {
+    h.push({ from: "в ремонте", to: "устранён", at: day(22 + n) });
+  }
+  if (status === "отклонён") {
+    h.push({ from: "новый", to: "отклонён", at: day(21 + n) });
+  }
+  return h;
+};
+
 const defect = (n, fields) => ({
   id: `d_${n}`,
   vin: DEMO_VIN,
@@ -18,10 +32,11 @@ const defect = (n, fields) => ({
   comment: "",
   createdAt: day(20 + n),
   ...fields,
+  statusHistory: historyFor(n, fields.status),
 });
 
 const data = defaultData();
-data.vins = [DEMO_VIN, "X1"];
+data.vins = [DEMO_VIN, "X1", "Z94C241BBLR000002"];
 // Координаты лежат на поверхностях 3D-модели (см. buildCar в CarBodyMap.vue):
 // капот — верх y≈1.04, x∈[0.83..2.07]; двери — внешняя плоскость z≈0.93;
 // крыша — верх y≈1.56; багажник — верх y≈1.04, x∈[-2.15..-1.15].

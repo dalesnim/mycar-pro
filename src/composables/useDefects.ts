@@ -1,5 +1,10 @@
 import { computed, ref, watch } from "vue";
-import type { Defect, DefectStatus, DefectType } from "../types/defect";
+import type {
+  Defect,
+  DefectStatus,
+  DefectType,
+  VinSummary,
+} from "../types/defect";
 import { canTransition } from "../logic/fsm";
 import { summarizeByStatus } from "../logic/summary";
 import {
@@ -27,6 +32,7 @@ const OFFLINE_HINT =
 export function createDefectStore(api: DefectApi = createHttpApi()) {
   const defects = ref<Defect[]>([]);
   const defectTypes = ref<DefectType[]>([...DEFECT_CATALOG]);
+  const vins = ref<VinSummary[]>([]);
   const selectedId = ref<string | null>(null);
   const draft = ref<MarkerDraft | null>(null);
   const currentVin = ref("Z94C241BBLR000001");
@@ -34,6 +40,7 @@ export function createDefectStore(api: DefectApi = createHttpApi()) {
   const filterStatus = ref<DefectStatus | "">("");
   const loading = ref(false);
   const apiError = ref("");
+  const lastSyncAt = ref<Date | null>(null);
 
   const bodyDefects = computed(() =>
     defects.value.filter((d) => d.vin === currentVin.value),
@@ -69,18 +76,56 @@ export function createDefectStore(api: DefectApi = createHttpApi()) {
   async function refresh(): Promise<void> {
     loading.value = true;
     try {
-      const [list, types] = await Promise.all([
+      const [list, types, vinList] = await Promise.all([
         api.listDefects(currentVin.value),
         api.listDefectTypes(),
+        api.listVins(),
       ]);
       defects.value = list;
       defectTypes.value = types;
+      vins.value = vinList;
       apiError.value = "";
+      lastSyncAt.value = new Date();
     } catch (e) {
       reportTransportError(e);
     } finally {
       loading.value = false;
     }
+  }
+
+  /** Все дефекты завода (для журнала и аналитики). */
+  function listAll(): Promise<Defect[]> {
+    return api.listDefects();
+  }
+
+  async function refreshVins(): Promise<void> {
+    try {
+      vins.value = await api.listVins();
+    } catch (e) {
+      reportTransportError(e);
+    }
+  }
+
+  /** Регистрация чистого кузова; возвращает текст ошибки или "" при успехе. */
+  async function addVin(vin: string): Promise<string> {
+    const trimmed = vin.trim();
+    if (!trimmed) return "Укажите VIN кузова";
+    try {
+      await api.createVin(trimmed);
+      await refreshVins();
+      currentVin.value = trimmed;
+      return "";
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 400) {
+        return e.errors.vin ?? e.message;
+      }
+      reportTransportError(e);
+      return OFFLINE_HINT;
+    }
+  }
+
+  function typeName(typeId: string): string {
+    return defectTypes.value.find((t) => t.id === typeId)?.name ?? typeId;
   }
 
   watch(currentVin, () => {
@@ -127,6 +172,7 @@ export function createDefectStore(api: DefectApi = createHttpApi()) {
       draft.value = null;
       selectedId.value = created.id;
       apiError.value = "";
+      void refreshVins();
       return { ok: true, errors: {} };
     } catch (e) {
       return toValidationResult(e);
@@ -170,6 +216,7 @@ export function createDefectStore(api: DefectApi = createHttpApi()) {
     }
     defects.value = defects.value.filter((d) => d.id !== id);
     if (selectedId.value === id) selectedId.value = null;
+    void refreshVins();
   }
 
   async function changeStatus(id: string, to: DefectStatus): Promise<boolean> {
@@ -179,6 +226,7 @@ export function createDefectStore(api: DefectApi = createHttpApi()) {
       const updated = await api.updateDefect(id, { status: to });
       Object.assign(defect, updated);
       apiError.value = "";
+      void refreshVins();
       return true;
     } catch (e) {
       reportTransportError(e);
@@ -189,6 +237,7 @@ export function createDefectStore(api: DefectApi = createHttpApi()) {
   return {
     defects,
     defectTypes,
+    vins,
     selectedId,
     draft,
     currentVin,
@@ -196,11 +245,16 @@ export function createDefectStore(api: DefectApi = createHttpApi()) {
     filterStatus,
     loading,
     apiError,
+    lastSyncAt,
     bodyDefects,
     visibleDefects,
     selectedDefect,
     summary,
     refresh,
+    refreshVins,
+    listAll,
+    addVin,
+    typeName,
     startDraft,
     cancelDraft,
     selectDefect,
@@ -212,12 +266,20 @@ export function createDefectStore(api: DefectApi = createHttpApi()) {
   };
 }
 
+const SYNC_INTERVAL_MS = 15000;
+
 let store: ReturnType<typeof createDefectStore> | null = null;
 
 export function useDefects() {
   if (!store) {
     store = createDefectStore();
     void store.refresh();
+    // фоновая синхронизация: данные меняют и другие рабочие места
+    if (typeof document !== "undefined") {
+      setInterval(() => {
+        if (!document.hidden) void store!.refresh();
+      }, SYNC_INTERVAL_MS);
+    }
   }
   return store;
 }

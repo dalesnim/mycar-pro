@@ -181,6 +181,59 @@ describe("персистентность (данные переживают пе
   });
 });
 
+describe("кузова (VIN)", () => {
+  it("POST /vins регистрирует чистый кузов; повторно -> 400", async () => {
+    const app = makeApp();
+    const ok = await request(app).post("/vins").send({ vin: "CLEAN1" });
+    expect(ok.status).toBe(201);
+
+    const dup = await request(app).post("/vins").send({ vin: "CLEAN1" });
+    expect(dup.status).toBe(400);
+
+    const empty = await request(app).post("/vins").send({});
+    expect(empty.status).toBe(400);
+  });
+
+  it("GET /vins возвращает сводку по каждому кузову", async () => {
+    const app = makeApp();
+    await request(app).post("/vins").send({ vin: "CLEAN1" });
+    const d = await createDefect(app); // VIN X1
+    await request(app).patch(`/defects/${d.id}`).send({ status: "в ремонте" });
+
+    const res = await request(app).get("/vins");
+    expect(res.status).toBe(200);
+    const byVin = Object.fromEntries(res.body.map((v) => [v.vin, v]));
+    expect(byVin.CLEAN1).toMatchObject({ total: 0, open: 0, fit: true });
+    expect(byVin.X1).toMatchObject({ total: 1, open: 1, fit: false });
+  });
+
+  it("PDI для зарегистрированного чистого кузова -> годен=да", async () => {
+    const app = makeApp();
+    await request(app).post("/vins").send({ vin: "CLEAN1" });
+    const res = await request(app).get("/inspections/CLEAN1/pdi-report?format=csv");
+    expect(res.status).toBe(200);
+    expect(res.text).toContain("годен=да");
+  });
+});
+
+describe("история статусов", () => {
+  it("PATCH статуса дописывает запись в statusHistory", async () => {
+    const app = makeApp();
+    const d = await createDefect(app);
+    expect(d.statusHistory).toHaveLength(1);
+    expect(d.statusHistory[0].to).toBe("новый");
+
+    const res = await request(app)
+      .patch(`/defects/${d.id}`)
+      .send({ status: "в ремонте" });
+    expect(res.body.statusHistory).toHaveLength(2);
+    expect(res.body.statusHistory[1]).toMatchObject({
+      from: "новый",
+      to: "в ремонте",
+    });
+  });
+});
+
 describe("справочник типов", () => {
   it("GET /defect-types возвращает стартовый каталог", async () => {
     const app = makeApp();

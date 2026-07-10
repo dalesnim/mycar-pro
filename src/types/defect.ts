@@ -10,6 +10,12 @@ export interface DefectType {
   category: string;
 }
 
+export interface StatusChange {
+  from?: DefectStatus;
+  to: DefectStatus;
+  at: string;
+}
+
 export interface Defect {
   id: string;
   vin: string;
@@ -22,4 +28,14 @@ export interface Defect {
   status: DefectStatus;
   comment: string;
   createdAt: string;
+  statusHistory?: StatusChange[];
+}
+
+export interface VinSummary {
+  vin: string;
+  total: number;
+  open: number;
+  fixed: number;
+  rejected: number;
+  fit: boolean;
 }

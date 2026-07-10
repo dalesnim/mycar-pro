@@ -39,7 +39,12 @@ to override, and `VITE_API_URL` on the frontend if the API is not on
 | DELETE | `/defects/{id}` | delete defect (404 if unknown) |
 | GET    | `/defect-types` | defect type catalog |
 | POST   | `/defect-types` | add a catalog type |
+| GET    | `/vins` | all bodies with per-VIN stats and fit verdict |
+| POST   | `/vins` | register a clean body (so its PDI reads годен=да) |
 | GET    | `/inspections/{vin}/pdi-report` | PDI report, `?format=html` (default) or `csv` |
+
+Every status change is recorded in the defect's `statusHistory`
+(`[{from, to, at}]`), shown as a timeline in the defect card.
 
 Validation lives on **both** sides: the frontend validates for convenience, the
 server validates so the rules cannot be bypassed (required `typeId`/`zone`,
@@ -87,9 +92,29 @@ Columns: `N; zone; type; severity; status; comment; date`, then a summary line
 defects is годен=да; an unknown VIN returns a clear 404 (never a silent empty
 file).
 
+## The workstation UI
+
+Three views in the left rail (deep-linkable via `?view=journal|analytics`,
+theme via `?theme=dark`):
+
+- **Осмотр** — andon strip (per-status counters + live «годен / не годен»
+  verdict), the 3D car with camera presets (изо/спереди/сзади/…), marker hover
+  tooltips and a status legend, the defect card with a status-history timeline,
+  and a searchable, sortable defect list.
+- **Журнал** — a factory-wide table of all defects across every VIN with
+  search and status filter; clicking a row jumps to that defect on its car.
+- **Аналитика** — headline stats (total, open, fit cars, fixed share), status
+  distribution bar, and defect counts by zone / type / severity.
+
+The left rail lists every body with a fit lamp and open/total counts;
+«+ Новый кузов» registers a clean VIN. Data auto-syncs from the server every
+15 s; the topbar shows the last sync time, PDI/CSV export for the current VIN,
+and a light/dark theme toggle. Actions confirm with toasts; deletion asks
+first.
+
 ## How to use
 
-1. Set the body VIN in the summary bar (defects are scoped per body).
+1. Pick a body in the left rail, or register a new VIN (defects are scoped per body).
 2. Drag to rotate the car (wheel = zoom). Click a spot on the body: a red
    draft marker appears there and the card opens with the zone prefilled.
 3. Pick a defect type and zone (both required; save is blocked with visible

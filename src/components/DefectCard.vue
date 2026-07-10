@@ -6,9 +6,11 @@ import { SEVERITIES, type DefectStatus, type Severity } from "../types/defect";
 import { allowedTransitions } from "../logic/fsm";
 import { STATUS_COLORS } from "../data/statusTheme";
 import type { ValidationErrors } from "../logic/validation";
+import { useToasts } from "../composables/useToasts";
 
 const store = useDefects();
 const { draft, selectedDefect, defectTypes } = store;
+const { push } = useToasts();
 
 const zoneOptions = ZONE_IDS;
 
@@ -40,11 +42,15 @@ function applyValidationErrors(res: { errors: ValidationErrors }) {
 
 async function onSave() {
   if (mode.value === "create") {
-    applyValidationErrors(await store.saveDraft({ ...form }));
+    const res = await store.saveDraft({ ...form });
+    applyValidationErrors(res);
+    if (res.ok) push("ok", "Дефект зафиксирован");
   } else if (mode.value === "edit") {
     const d = selectedDefect.value;
     if (!d) return;
-    applyValidationErrors(await store.updateDefect(d.id, { ...form }));
+    const res = await store.updateDefect(d.id, { ...form });
+    applyValidationErrors(res);
+    if (res.ok) push("ok", "Изменения сохранены");
   }
 }
 
@@ -53,14 +59,19 @@ function onCancel() {
   else store.clearSelection();
 }
 
-function onDelete() {
+async function onDelete() {
   const d = selectedDefect.value;
-  if (d) void store.deleteDefect(d.id);
+  if (!d) return;
+  if (!window.confirm(`Удалить дефект ${d.id} (${d.zone})?`)) return;
+  await store.deleteDefect(d.id);
+  push("info", `Дефект ${d.id} удалён`);
 }
 
-function onStatusChange(to: DefectStatus) {
+async function onStatusChange(to: DefectStatus) {
   const d = selectedDefect.value;
-  if (d) void store.changeStatus(d.id, to);
+  if (!d) return;
+  const ok = await store.changeStatus(d.id, to);
+  push(ok ? "ok" : "error", ok ? `Статус: ${to}` : "Не удалось сменить статус");
 }
 
 watch(draft, (d) => {
@@ -154,6 +165,25 @@ watch(selectedDefect, (d) => {
           · {{ selectedDefect.createdAt.slice(0, 10) }}</template>
       </p>
 
+      <div
+        v-if="mode === 'edit' && selectedDefect?.statusHistory?.length"
+        class="history"
+      >
+        <p class="history-title">История статусов</p>
+        <ol class="history-list">
+          <li v-for="(h, i) in selectedDefect.statusHistory" :key="i">
+            <span class="history-date">{{ h.at.slice(0, 10) }}</span>
+            <span
+              class="history-dot"
+              :style="{ backgroundColor: STATUS_COLORS[h.to] }"
+            ></span>
+            <span>
+              <template v-if="h.from">{{ h.from }} → </template>{{ h.to }}
+            </span>
+          </li>
+        </ol>
+      </div>
+
       <div class="actions">
         <button type="submit" class="btn btn-primary">Сохранить</button>
         <button type="button" class="btn" @click="onCancel">
@@ -208,7 +238,7 @@ textarea {
   padding: 6px 8px;
   border: 1px solid var(--panel-border);
   border-radius: 4px;
-  background: #f6f8fa;
+  background: var(--input-bg);
   color: var(--ink);
 }
 select.invalid,
@@ -256,13 +286,13 @@ textarea.invalid {
   padding: 7px 14px;
   border: 1px solid var(--panel-border);
   border-radius: var(--radius);
-  background: #f2f5f8;
+  background: var(--btn-bg);
   color: var(--text);
   cursor: pointer;
   transition: background 0.12s;
 }
 .btn:hover {
-  background: #e6ecf1;
+  background: var(--btn-hover);
 }
 .btn-primary {
   background: var(--accent);
@@ -273,16 +303,54 @@ textarea.invalid {
   background: var(--accent-hover);
 }
 .btn-danger {
-  background: #fff;
+  background: var(--panel-bg);
   border-color: var(--danger);
   color: var(--danger);
 }
 .btn-status {
   border-color: var(--accent);
   color: var(--accent);
-  background: #fff;
+  background: var(--panel-bg);
 }
 .btn-status:hover {
   background: var(--accent-soft);
+}
+.history {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.history-title {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+.history-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.history-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.history-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
 }
 </style>

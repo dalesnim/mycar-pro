@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { computed, ref } from "vue";
 import { useDefects } from "../composables/useDefects";
-import { DEFECT_STATUSES } from "../types/defect";
+import { DEFECT_STATUSES, SEVERITIES } from "../types/defect";
 import { STATUS_COLORS } from "../data/statusTheme";
 
 const store = useDefects();
@@ -13,14 +14,39 @@ const {
   selectDefect,
 } = store;
 
-function typeName(typeId: string): string {
-  return defectTypes.value.find((t) => t.id === typeId)?.name ?? typeId;
-}
+const typeName = store.typeName;
+
+const search = ref("");
+const sortBy = ref<"date" | "severity" | "status">("date");
+
+const severityRank = Object.fromEntries(SEVERITIES.map((s, i) => [s, i]));
+const statusRank = Object.fromEntries(DEFECT_STATUSES.map((s, i) => [s, i]));
+
+const shownDefects = computed(() => {
+  const q = search.value.trim().toLowerCase();
+  const list = visibleDefects.value.filter(
+    (d) =>
+      !q ||
+      [d.zone, typeName(d.typeId), d.comment, d.id]
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
+  );
+  return list.slice().sort((a, b) => {
+    if (sortBy.value === "severity") {
+      return (severityRank[b.severity] ?? 0) - (severityRank[a.severity] ?? 0);
+    }
+    if (sortBy.value === "status") {
+      return (statusRank[a.status] ?? 0) - (statusRank[b.status] ?? 0);
+    }
+    return a.createdAt < b.createdAt ? 1 : -1; // новые сверху
+  });
+});
 </script>
 
 <template>
   <section class="list-panel">
-    <h2 class="panel-heading">Дефекты · {{ visibleDefects.length }}</h2>
+    <h2 class="panel-heading">Дефекты · {{ shownDefects.length }}</h2>
 
     <div class="filters">
       <select v-model="filterTypeId" aria-label="Фильтр по типу">
@@ -33,15 +59,27 @@ function typeName(typeId: string): string {
         <option value="">все статусы</option>
         <option v-for="s in DEFECT_STATUSES" :key="s" :value="s">{{ s }}</option>
       </select>
+      <select v-model="sortBy" aria-label="Сортировка">
+        <option value="date">сначала новые</option>
+        <option value="severity">по серьёзности</option>
+        <option value="status">по статусу</option>
+      </select>
     </div>
+    <input
+      v-model="search"
+      class="search"
+      type="search"
+      placeholder="Поиск по зоне, типу, комментарию…"
+      aria-label="Поиск по дефектам"
+    />
 
-    <p v-if="visibleDefects.length === 0" class="empty">
-      Дефектов нет. Кликните по схеме кузова.
+    <p v-if="shownDefects.length === 0" class="empty">
+      {{ search ? "Ничего не найдено по запросу." : "Дефектов нет. Кликните по схеме кузова." }}
     </p>
 
     <ul v-else class="items">
       <li
-        v-for="d in visibleDefects"
+        v-for="d in shownDefects"
         :key="d.id"
         class="item"
         :class="{ selected: d.id === selectedId }"
@@ -90,10 +128,21 @@ function typeName(typeId: string): string {
   padding: 4px 8px;
   border: 1px solid var(--panel-border);
   border-radius: 4px;
-  background: #f6f8fa;
+  background: var(--input-bg);
   color: var(--ink);
   flex: 1;
   min-width: 0;
+}
+.search {
+  font: inherit;
+  font-size: 13px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--ink);
+  margin-bottom: 10px;
 }
 .empty {
   color: var(--text-dim);
@@ -115,12 +164,12 @@ function typeName(typeId: string): string {
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border: 1px solid #e2e8ee;
+  border: 1px solid var(--line);
   border-radius: 4px;
   cursor: pointer;
 }
 .item:hover {
-  background: #f4f8fb;
+  background: var(--hover-bg);
 }
 .item.selected {
   border-color: var(--accent);

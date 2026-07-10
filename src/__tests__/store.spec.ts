@@ -187,6 +187,12 @@ describe("defect store (через API)", () => {
       async listDefectTypes() {
         throw new TypeError("fetch failed");
       },
+      async listVins() {
+        throw new TypeError("fetch failed");
+      },
+      async createVin() {
+        throw new TypeError("fetch failed");
+      },
     });
     await store.refresh();
     expect(store.apiError.value).toContain("Сервер недоступен");

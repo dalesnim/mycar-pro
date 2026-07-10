@@ -3,6 +3,7 @@ import type {
   DefectStatus,
   DefectType,
   Severity,
+  VinSummary,
 } from "../types/defect";
 
 export const API_BASE =
@@ -33,6 +34,8 @@ export interface DefectApi {
   updateDefect(id: string, patch: DefectPatch): Promise<Defect>;
   deleteDefect(id: string): Promise<void>;
   listDefectTypes(): Promise<DefectType[]>;
+  listVins(): Promise<VinSummary[]>;
+  createVin(vin: string): Promise<void>;
 }
 
 /** Ошибка уровня API: сервер ответил 4xx/5xx (в отличие от сетевого сбоя). */
@@ -93,6 +96,15 @@ export function createHttpApi(): DefectApi {
     },
     listDefectTypes() {
       return request<DefectType[]>("/defect-types");
+    },
+    listVins() {
+      return request<VinSummary[]>("/vins");
+    },
+    async createVin(vin) {
+      await request<{ vin: string }>("/vins", {
+        method: "POST",
+        body: JSON.stringify({ vin }),
+      });
     },
   };
 }

@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { canTransition, SEVERITIES, TRANSITIONS } from "./fsm.js";
+import { canTransition, OPEN_STATUSES, SEVERITIES, TRANSITIONS } from "./fsm.js";
 import { buildPdiReport, renderPdiCsv, renderPdiHtml } from "./pdi.js";
 
 function validateDefectFields(body, defectTypes, { partial = false } = {}) {
@@ -67,6 +67,7 @@ export function createApp(storage) {
       status: "новый",
       comment: typeof body.comment === "string" ? body.comment : "",
       createdAt: new Date().toISOString(),
+      statusHistory: [{ to: "новый", at: new Date().toISOString() }],
     };
     db.defects.push(defect);
     if (!db.vins.includes(defect.vin)) db.vins.push(defect.vin);
@@ -99,7 +100,14 @@ export function createApp(storage) {
     if ("comment" in body && typeof body.comment === "string") {
       defect.comment = body.comment;
     }
-    if ("status" in body) defect.status = body.status;
+    if ("status" in body && body.status !== defect.status) {
+      (defect.statusHistory ??= []).push({
+        from: defect.status,
+        to: body.status,
+        at: new Date().toISOString(),
+      });
+      defect.status = body.status;
+    }
     persist();
     res.json(defect);
   });
@@ -112,6 +120,43 @@ export function createApp(storage) {
     db.defects.splice(index, 1);
     persist();
     res.status(204).end();
+  });
+
+  // --- Кузова (VIN) ---------------------------------------------------------
+
+  app.get("/vins", (_req, res) => {
+    const known = [...new Set([...db.vins, ...db.defects.map((d) => d.vin)])];
+    res.json(
+      known.map((vin) => {
+        const list = db.defects.filter((d) => d.vin === vin);
+        const open = list.filter((d) => OPEN_STATUSES.includes(d.status)).length;
+        return {
+          vin,
+          total: list.length,
+          open,
+          fixed: list.filter((d) => d.status === "устранён").length,
+          rejected: list.filter((d) => d.status === "отклонён").length,
+          fit: open === 0,
+        };
+      }),
+    );
+  });
+
+  app.post("/vins", (req, res) => {
+    const vin = typeof req.body?.vin === "string" ? req.body.vin.trim() : "";
+    if (!vin) {
+      return res
+        .status(400)
+        .json({ error: "Ошибка валидации", errors: { vin: "Укажите VIN кузова" } });
+    }
+    if (db.vins.includes(vin) || db.defects.some((d) => d.vin === vin)) {
+      return res
+        .status(400)
+        .json({ error: "Ошибка валидации", errors: { vin: `Кузов ${vin} уже зарегистрирован` } });
+    }
+    db.vins.push(vin);
+    persist();
+    res.status(201).json({ vin });
   });
 
   // --- Справочник типов ---------------------------------------------------
