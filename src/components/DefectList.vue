@@ -20,7 +20,7 @@ function typeName(typeId: string): string {
 
 <template>
   <section class="list-panel">
-    <h2 class="panel-title">Дефекты ({{ visibleDefects.length }})</h2>
+    <h2 class="panel-heading">Дефекты · {{ visibleDefects.length }}</h2>
 
     <div class="filters">
       <select v-model="filterTypeId" aria-label="Фильтр по типу">
@@ -79,14 +79,6 @@ function typeName(typeId: string): string {
   box-shadow: var(--shadow-panel);
   padding: 16px 18px;
 }
-.panel-title {
-  margin: 0 0 12px;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-dim);
-}
 .filters {
   display: flex;
   gap: 8px;
@@ -96,14 +88,15 @@ function typeName(typeId: string): string {
   font: inherit;
   font-size: 13px;
   padding: 4px 8px;
-  border: 1px solid #c3ced8;
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  background: #f6f8fa;
+  color: var(--ink);
   flex: 1;
   min-width: 0;
 }
 .empty {
-  color: #6b7a89;
+  color: var(--text-dim);
   font-size: 14px;
   margin: 4px 0;
 }
@@ -123,15 +116,15 @@ function typeName(typeId: string): string {
   gap: 8px;
   padding: 8px 10px;
   border: 1px solid #e2e8ee;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
 }
 .item:hover {
   background: #f4f8fb;
 }
 .item.selected {
-  border-color: #2563eb;
-  background: #eef4ff;
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 .item-main {
   display: flex;
@@ -145,11 +138,11 @@ function typeName(typeId: string): string {
 }
 .item-zone {
   font-size: 12px;
-  color: #5b6b7c;
+  color: var(--text-dim);
 }
 .item-comment {
   font-size: 12px;
-  color: #8b93a1;
+  color: var(--text-faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -159,20 +152,20 @@ function typeName(typeId: string): string {
   font-size: 11px;
   font-weight: 600;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: 4px;
   white-space: nowrap;
 }
 .delete-btn {
   border: none;
   background: none;
-  color: #8b93a1;
+  color: var(--text-faint);
   font-size: 14px;
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 4px;
 }
 .delete-btn:hover {
-  color: #e5484d;
+  color: var(--danger);
   background: #fdecec;
 }
 </style>

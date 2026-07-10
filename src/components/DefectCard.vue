@@ -86,7 +86,7 @@ watch(selectedDefect, (d) => {
 
 <template>
   <section class="card">
-    <h2 class="card-title">Карточка дефекта</h2>
+    <h2 class="panel-heading">Карточка дефекта</h2>
 
     <p v-if="mode === 'empty'" class="placeholder">
       Кликните по схеме, чтобы добавить дефект,<br />
@@ -180,16 +180,8 @@ watch(selectedDefect, (d) => {
   box-shadow: var(--shadow-panel);
   padding: 16px 18px;
 }
-.card-title {
-  margin: 0 0 12px;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-dim);
-}
 .placeholder {
-  color: #6b7a89;
+  color: var(--text-dim);
   font-size: 14px;
   margin: 4px 0;
 }
@@ -204,25 +196,29 @@ watch(selectedDefect, (d) => {
   gap: 4px;
 }
 label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: #4a5a6a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
 }
 select,
 textarea {
   font: inherit;
   padding: 6px 8px;
-  border: 1px solid #c3ced8;
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  background: #f6f8fa;
+  color: var(--ink);
 }
 select.invalid,
 textarea.invalid {
-  border-color: #e5484d;
+  border-color: var(--danger);
+  background: #fdf6f6;
 }
 .error {
   margin: 0;
-  color: #e5484d;
+  color: var(--danger);
   font-size: 12px;
 }
 .status-row {
@@ -236,16 +232,17 @@ textarea.invalid {
   font-size: 12px;
   font-weight: 600;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: 4px;
 }
 .terminal-note {
   font-size: 12px;
-  color: #6b7a89;
+  color: var(--text-dim);
 }
 .meta {
   margin: 0;
-  font-size: 12px;
-  color: #6b7a89;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
 }
 .actions {
   display: flex;
@@ -257,9 +254,10 @@ textarea.invalid {
   font-size: 13px;
   font-weight: 600;
   padding: 7px 14px;
-  border: 1px solid #c3ced8;
-  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
   background: #f2f5f8;
+  color: var(--text);
   cursor: pointer;
   transition: background 0.12s;
 }
@@ -267,21 +265,24 @@ textarea.invalid {
   background: #e6ecf1;
 }
 .btn-primary {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
 }
 .btn-primary:hover {
-  background: #1d4ed8;
+  background: var(--accent-hover);
 }
 .btn-danger {
   background: #fff;
-  border-color: #e5484d;
-  color: #e5484d;
+  border-color: var(--danger);
+  color: var(--danger);
 }
 .btn-status {
-  border-color: #2563eb;
-  color: #2563eb;
+  border-color: var(--accent);
+  color: var(--accent);
   background: #fff;
+}
+.btn-status:hover {
+  background: var(--accent-soft);
 }
 </style>

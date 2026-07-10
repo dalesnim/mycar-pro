@@ -22,10 +22,13 @@ const defect = (n, fields) => ({
 
 const data = defaultData();
 data.vins = [DEMO_VIN, "X1"];
+// Координаты лежат на поверхностях 3D-модели (см. buildCar в CarBodyMap.vue):
+// капот — верх y≈1.04, x∈[0.83..2.07]; двери — внешняя плоскость z≈0.93;
+// крыша — верх y≈1.56; багажник — верх y≈1.04, x∈[-2.15..-1.15].
 data.defects = [
   defect(1, {
     zone: "капот",
-    x: -0.4, y: 0.62, z: 1.1,
+    x: 1.5, y: 1.075, z: 0.3,
     typeId: "chip",
     severity: "значительный",
     status: "устранён",
@@ -33,7 +36,7 @@ data.defects = [
   }),
   defect(2, {
     zone: "дверь передняя правая",
-    x: 0.85, y: 0.5, z: 0.3,
+    x: 0.55, y: 0.66, z: 0.965,
     typeId: "dent",
     severity: "незначительный",
     status: "в ремонте",
@@ -41,7 +44,7 @@ data.defects = [
   }),
   defect(3, {
     zone: "крыша",
-    x: 0, y: 1.15, z: -0.2,
+    x: -0.15, y: 1.595, z: 0.15,
     typeId: "paint",
     severity: "критический",
     status: "новый",
@@ -49,7 +52,7 @@ data.defects = [
   }),
   defect(4, {
     zone: "багажник",
-    x: 0.1, y: 0.7, z: -1.6,
+    x: -1.7, y: 1.075, z: -0.25,
     typeId: "gap",
     severity: "значительный",
     status: "отклонён",

@@ -1,17 +1,34 @@
 :root {
-  --bg-top: #f7f9fb;
-  --bg-bottom: #e9eef4;
+  /* steel neutrals */
+  --bg: #edf0f4;
   --panel-bg: #ffffff;
-  --panel-border: #dde5ec;
-  --radius: 12px;
-  --shadow-panel:
-    0 1px 2px rgba(23, 32, 42, 0.06),
-    0 8px 24px rgba(23, 32, 42, 0.07);
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
+  --panel-border: #d4dce4;
+  --ink: #17222c;
+  --text: var(--ink);
+  --text-dim: #5a6b7b;
+  --text-faint: #8595a5;
+
+  /* machine enamel */
+  --accent: #0f6f7c;
+  --accent-hover: #0b5a65;
+  --accent-soft: #e3f0f2;
+
+  /* signal colors (statuses) */
+  --signal-new: #e5484d;
+  --signal-repair: #e08a0c;
+  --signal-fixed: #2fa44f;
+  --signal-rejected: #8b93a1;
   --danger: #e5484d;
-  --text: #1f2933;
-  --text-dim: #5b6b7c;
+
+  /* stage (3D booth) */
+  --stage: #232a32;
+
+  --radius: 6px;
+  --shadow-panel: 0 1px 2px rgba(23, 34, 44, 0.08);
+
+  --font-display: "Avenir Next Condensed", "Helvetica Neue", "Arial Narrow",
+    system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 * {
@@ -21,14 +38,58 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom)) fixed;
+  font-size: 14px;
+  background-color: var(--bg);
+  /* engineering paper: faint dot grid */
+  background-image: radial-gradient(
+    circle,
+    rgba(23, 34, 44, 0.07) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
   color: var(--text);
+}
+
+::selection {
+  background: var(--accent);
+  color: #fff;
 }
 
 select:focus-visible,
 textarea:focus-visible,
 input:focus-visible,
-button:focus-visible {
-  outline: 2px solid rgba(37, 99, 235, 0.35);
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* shared vocabulary: panel titles read like inspection-sheet headings */
+.panel-heading {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-heading::before {
+  content: "";
+  width: 4px;
+  height: 14px;
+  background: var(--accent);
+  flex: none;
 }

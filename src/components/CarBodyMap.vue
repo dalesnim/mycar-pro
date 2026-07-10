@@ -2,16 +2,19 @@
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { useDefects } from "../composables/useDefects";
 import { ZONE } from "../data/bodyZones";
 import { STATUS_COLORS } from "../data/statusTheme";
 import type { DefectStatus } from "../types/defect";
 
-const STAGE_BG = 0xf2f5f9;
-const EDGE_COLOR = 0x8fa1b3;
-const PAINT = 0xdde4eb;
-const GLASS = 0xa7bccd;
-const DARK = 0x39434e;
+const STAGE_BG = 0x232a32;
+const PAINT = 0xd6dce2;
+const GLASS = 0x5d7284;
+const DARK = 0x2c333b;
+const HUB = 0x9aa5b0;
+// цвет взаимодействия (черновик, выделение) — отличен от сигнальных цветов статусов
+const INTERACT = 0x35c4d7;
 const MARKER_R = 0.07;
 const CLICK_SLOP_PX = 6;
 
@@ -38,45 +41,64 @@ const markerGeo = new THREE.SphereGeometry(MARKER_R, 20, 14);
 const markerMats = Object.fromEntries(
   (Object.keys(STATUS_COLORS) as DefectStatus[]).map((s) => [
     s,
-    new THREE.MeshStandardMaterial({ color: STATUS_COLORS[s], roughness: 0.55 }),
+    new THREE.MeshStandardMaterial({
+      color: STATUS_COLORS[s],
+      roughness: 0.4,
+      emissive: STATUS_COLORS[s],
+      emissiveIntensity: 0.35,
+    }),
   ]),
 ) as Record<DefectStatus, THREE.MeshStandardMaterial>;
 
 const haloMesh = new THREE.Mesh(
   new THREE.SphereGeometry(MARKER_R * 1.9, 20, 14),
-  new THREE.MeshBasicMaterial({ color: 0x2563eb, transparent: true, opacity: 0.28 }),
+  new THREE.MeshBasicMaterial({ color: INTERACT, transparent: true, opacity: 0.3 }),
 );
 const draftMesh = new THREE.Mesh(
   new THREE.SphereGeometry(MARKER_R * 1.1, 20, 14),
-  new THREE.MeshStandardMaterial({ color: 0xe5484d, roughness: 0.5 }),
+  new THREE.MeshStandardMaterial({
+    color: INTERACT,
+    roughness: 0.35,
+    emissive: INTERACT,
+    emissiveIntensity: 0.5,
+  }),
 );
 
 function addPart(
   geo: THREE.BufferGeometry,
-  color: number,
+  material: THREE.Material,
   zone: string | null,
   x: number,
   y: number,
   z: number,
 ) {
-  const mesh = new THREE.Mesh(
-    geo,
-    new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0 }),
-  );
+  const mesh = new THREE.Mesh(geo, material);
   mesh.position.set(x, y, z);
   if (zone) mesh.userData.zone = zone;
-  const edges = new THREE.LineSegments(
-    new THREE.EdgesGeometry(geo, 25),
-    new THREE.LineBasicMaterial({ color: EDGE_COLOR }),
-  );
-  mesh.add(edges);
   carGroup.add(mesh);
 }
 
 function buildCar() {
-  addPart(new THREE.BoxGeometry(4.4, 0.62, 1.8), PAINT, ZONE.body, 0, 0.63, 0);
-  addPart(new THREE.BoxGeometry(1.25, 0.1, 1.7), PAINT, ZONE.hood, 1.45, 0.99, 0);
-  addPart(new THREE.BoxGeometry(1.0, 0.1, 1.7), PAINT, ZONE.trunk, -1.65, 0.99, 0);
+  const paintMat = new THREE.MeshStandardMaterial({
+    color: PAINT,
+    roughness: 0.35,
+    metalness: 0.25,
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: GLASS,
+    roughness: 0.2,
+    metalness: 0.45,
+  });
+  const tireMat = new THREE.MeshStandardMaterial({ color: DARK, roughness: 0.9 });
+  const hubMat = new THREE.MeshStandardMaterial({
+    color: HUB,
+    roughness: 0.3,
+    metalness: 0.7,
+  });
+
+  addPart(new RoundedBoxGeometry(4.4, 0.62, 1.8, 4, 0.09), paintMat, ZONE.body, 0, 0.63, 0);
+  addPart(new RoundedBoxGeometry(1.25, 0.1, 1.7, 3, 0.04), paintMat, ZONE.hood, 1.45, 0.99, 0);
+  addPart(new RoundedBoxGeometry(1.0, 0.1, 1.7, 3, 0.04), paintMat, ZONE.trunk, -1.65, 0.99, 0);
 
   const profile = new THREE.Shape();
   profile.moveTo(-1.15, 0.94);
@@ -84,25 +106,34 @@ function buildCar() {
   profile.lineTo(0.5, 1.56);
   profile.lineTo(-0.82, 1.56);
   profile.closePath();
-  const cabinGeo = new THREE.ExtrudeGeometry(profile, { depth: 1.5, bevelEnabled: false });
+  const cabinGeo = new THREE.ExtrudeGeometry(profile, {
+    depth: 1.5,
+    bevelEnabled: true,
+    bevelThickness: 0.03,
+    bevelSize: 0.03,
+    bevelSegments: 2,
+  });
   cabinGeo.translate(0, 0, -0.75);
-  addPart(cabinGeo, GLASS, ZONE.roof, 0, 0, 0);
+  addPart(cabinGeo, glassMat, ZONE.roof, 0, 0, 0);
 
-  const doorGeo = new THREE.BoxGeometry(0.85, 0.48, 0.06);
-  addPart(doorGeo, PAINT, ZONE.doorFrontRight, 0.47, 0.62, 0.9);
-  addPart(doorGeo, PAINT, ZONE.doorRearRight, -0.44, 0.62, 0.9);
-  addPart(doorGeo, PAINT, ZONE.doorFrontLeft, 0.47, 0.62, -0.9);
-  addPart(doorGeo, PAINT, ZONE.doorRearLeft, -0.44, 0.62, -0.9);
+  const doorGeo = new RoundedBoxGeometry(0.85, 0.48, 0.06, 2, 0.02);
+  addPart(doorGeo, paintMat, ZONE.doorFrontRight, 0.47, 0.62, 0.9);
+  addPart(doorGeo, paintMat, ZONE.doorRearRight, -0.44, 0.62, 0.9);
+  addPart(doorGeo, paintMat, ZONE.doorFrontLeft, 0.47, 0.62, -0.9);
+  addPart(doorGeo, paintMat, ZONE.doorRearLeft, -0.44, 0.62, -0.9);
 
   const wheelGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 24);
   wheelGeo.rotateX(Math.PI / 2);
+  const hubGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.26, 16);
+  hubGeo.rotateX(Math.PI / 2);
   for (const [wx, wz] of [
     [1.45, 0.82],
     [1.45, -0.82],
     [-1.45, 0.82],
     [-1.45, -0.82],
   ]) {
-    addPart(wheelGeo, DARK, null, wx, 0.34, wz);
+    addPart(wheelGeo, tireMat, null, wx, 0.34, wz);
+    addPart(hubGeo, hubMat, null, wx, 0.34, wz);
   }
 }
 
@@ -181,26 +212,32 @@ onMounted(() => {
   const wrap = wrapEl.value!;
 
   scene.background = new THREE.Color(STAGE_BG);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xd4dce4, 1.6));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.1);
-  sun.position.set(5, 8, 4);
-  scene.add(sun);
+  scene.add(new THREE.HemisphereLight(0xbfccd8, 0x2b333c, 1.2));
+  const key = new THREE.DirectionalLight(0xffffff, 1.7);
+  key.position.set(5, 8, 4);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight(0x8fb8c9, 0.7);
+  rim.position.set(-6, 4, -5);
+  scene.add(rim);
 
-  const disc = new THREE.Mesh(
-    new THREE.CircleGeometry(3.4, 48),
-    new THREE.MeshBasicMaterial({ color: 0xe6ebf1 }),
+  // контактная тень под машиной (одна плоскость — без z-fighting с сеткой)
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(2.3, 48),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22 }),
   );
-  disc.rotation.x = -Math.PI / 2;
-  disc.position.y = 0.001;
-  scene.add(disc);
-  const grid = new THREE.GridHelper(12, 24, 0xd9e1e9, 0xe6ecf2);
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = 0.005;
+  shadow.scale.set(1.1, 0.55, 1);
+  scene.add(shadow);
+  const grid = new THREE.GridHelper(14, 28, 0x3c4854, 0x2d3640);
+  grid.position.y = -0.01;
   scene.add(grid);
 
   buildCar();
   scene.add(carGroup, markerGroup);
 
-  camera = new THREE.PerspectiveCamera(40, 1, 0.1, 60);
-  camera.position.set(5.4, 3.2, 5.8);
+  camera = new THREE.PerspectiveCamera(38, 1, 0.1, 60);
+  camera.position.set(5.4, 3.1, 5.8);
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -252,7 +289,9 @@ onBeforeUnmount(() => {
 <template>
   <div class="map3d">
     <div ref="wrapEl" class="canvas-wrap" aria-label="3D-модель кузова"></div>
-    <p class="hint">перетащите — вращение · колесо — масштаб · клик по кузову — точка дефекта</p>
+    <p class="hint">
+      перетащите — вращение · колесо — масштаб · клик по кузову — точка дефекта
+    </p>
   </div>
 </template>
 
@@ -263,7 +302,7 @@ onBeforeUnmount(() => {
 }
 .canvas-wrap {
   width: 100%;
-  height: 420px;
+  height: 460px;
   cursor: grab;
 }
 .canvas-wrap:active {
@@ -275,9 +314,10 @@ onBeforeUnmount(() => {
 .hint {
   margin: 0;
   padding: 8px 14px;
-  font-size: 12px;
-  color: var(--text-dim);
-  border-top: 1px solid var(--panel-border);
-  background: var(--panel-bg);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #8b99a7;
+  border-top: 1px solid #39434e;
+  background: var(--stage);
 }
 </style>
